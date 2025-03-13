@@ -2,6 +2,16 @@
 # GEM Model Trainer & Evaluator - Callable Version
 # ================================================
 
+import torch
+import torch.quantization
+from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification, get_linear_schedule_with_warmup
+from sklearn.cluster import MiniBatchKMeans
+from torch.utils.data import DataLoader
+import torch.nn as nn
+import torch.nn.functional as F
+from tqdm import tqdm
+import numpy as np
+
 def run_gem_pipeline(
     dataset,
     model_name="bert-base-uncased",
