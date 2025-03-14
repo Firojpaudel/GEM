@@ -50,6 +50,41 @@ Create a new python file and execute the code like:
 > ***Boom—your ODLM is training with boosted accuracy!***
 
 ---
+### Running on Colab/Kaggle?
+
+Well it's pretty similar to the local run.
+
+```python
+#@ Step 1: Clone the github repo 
+!git clone https://github.com/Firojpaudel/GEM.git
+
+#@ Step 2: Install all requirements 
+!pip install -r /content/GEM/requirements.txt  #! For colab
+
+"""
+
+@! For kaggle:
+!pip install  -r /kaggle/working/GEM/requirements.txt
+
+"""
+
+#@ Step 3: Add repo to path
+import sys
+sys.path.append('/content/GEM')
+
+#@ Step 4: Import and run function
+from gem_trainer import run_gem_pipeline
+from datasets import load_dataset
+
+#@ Rest of the code as above
+dataset = load_dataset("imdb")
+
+result = run_gem_pipeline(dataset, num_classes=2, num_epochs=2)
+
+print(result)
+```
+
+---
 ### Customizing Training:
 `run_gem_pipeline` keeps it simple, but you can tweak it! Dive into [`gem_trainer.py`](./gem_trainer.py) to adjust epochs, batch size, or other settings to fit your needs.
 
