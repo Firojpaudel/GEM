@@ -55,6 +55,13 @@ Create a new python file and execute the code like:
 Well it's pretty similar to the local run.
 
 ```python
+""" This is very recommended to run for clean ouput during trains...
+
+import warnings 
+warnings.filterwarnings('ignore')
+
+"""
+
 #@ Step 1: Clone the github repo 
 !git clone https://github.com/Firojpaudel/GEM.git
 
@@ -70,7 +77,7 @@ Well it's pretty similar to the local run.
 
 #@ Step 3: Add repo to path
 import sys
-sys.path.append('/content/GEM')
+sys.path.append('/content/GEM')  #! Or /kaggle/working/GEM (for kaggle)
 
 #@ Step 4: Import and run function
 from gem_trainer import run_gem_pipeline
