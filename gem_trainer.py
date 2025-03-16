@@ -61,12 +61,14 @@ def run_gem_pipeline(
     # Use "custom" tokenize_function if provided; else use the default
     if tokenize_fn is None:
         def tokenize_fn(examples):
-            return tokenizer(
+            tokenized = tokenizer(
                 examples['text'],
                 padding='max_length',
                 truncation=True,
                 max_length=max_seq_length
             )
+            tokenized['labels'] = examples['label']  
+            return tokenized
 
     dataset = dataset.map(tokenize_fn, batched=True)
 
@@ -76,7 +78,7 @@ def run_gem_pipeline(
             return {
                 'input_ids': torch.stack([torch.tensor(x['input_ids']) for x in batch]),
                 'attention_mask': torch.stack([torch.tensor(x['attention_mask']) for x in batch]),
-                'labels': torch.tensor([x['label'] for x in batch])
+                'labels': torch.tensor([x['labels'] for x in batch])  # Use 'labels'
             }
 
     train_loader = DataLoader(
