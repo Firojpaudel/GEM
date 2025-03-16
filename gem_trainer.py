@@ -5,6 +5,7 @@
 import torch
 import torch.quantization
 from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification, get_linear_schedule_with_warmup
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased") ##@ making it global !!
 from sklearn.cluster import MiniBatchKMeans
 from torch.utils.data import DataLoader
 import torch.nn as nn
@@ -56,8 +57,7 @@ def run_gem_pipeline(
     # ========================
     # Tokenizer & Dataloaders
     # ========================
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-
+    
     # Use "custom" tokenize_function if provided; else use the default
     if tokenize_fn is None:
         def tokenize_fn(examples):
