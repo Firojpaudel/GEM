@@ -5,13 +5,14 @@
 import torch
 import torch.quantization
 from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification, get_linear_schedule_with_warmup
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased") ##@ making it global !!
 from sklearn.cluster import MiniBatchKMeans
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased") ##@ making it global !!
 
 def run_gem_pipeline(
     dataset,
@@ -170,12 +171,12 @@ def run_gem_pipeline(
             x = self.scar(x, cluster_ids, routing_mask)
             return self.classifier(x[:, 0, :])
 
-        def qakp_loss(self, outputs, labels, input_ids):
+        def qakp_loss(self, outputs, labels, input_ids, attention_mask):
             task_loss = F.cross_entropy(outputs, labels)
             quant_error = F.mse_loss(self.bert.quant(self.bert.dequant(outputs)), outputs)
 
             with torch.no_grad():
-                teacher_logits = self.teacher(input_ids).logits
+                teacher_logits = self.teacher(input_ids, attention_mask=attention_mask).logits
 
             kd_loss = F.kl_div(
                 F.log_softmax(outputs, dim=-1),
@@ -215,7 +216,7 @@ def run_gem_pipeline(
             labels = batch['labels'].to(device)
 
             outputs = model(input_ids, attention_mask)
-            loss = model.module.qakp_loss(outputs, labels, input_ids) if hasattr(model, 'module') else model.qakp_loss(outputs, labels, input_ids)
+            loss = model.module.qakp_loss(outputs, labels, input_ids, attention_mask) if hasattr(model, 'module') else model.qakp_loss(outputs, labels, input_ids, attention_mask)
 
             loss.backward()
 
