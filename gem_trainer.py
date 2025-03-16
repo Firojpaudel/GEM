@@ -22,7 +22,9 @@ def run_gem_pipeline(
     max_seq_length=128,
     gradient_accum_steps=2,
     cluster_size=256,
-    threshold=0.65
+    threshold=0.65, 
+    tokenize_fn= None,
+    collate_fn= None
 ):
     """
     Runs the GEM model training & evaluation pipeline on a custom dataset.
@@ -56,22 +58,26 @@ def run_gem_pipeline(
     # ========================
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-    def tokenize_fn(examples):
-        return tokenizer(
-            examples['text'],
-            padding='max_length',
-            truncation=True,
-            max_length=max_seq_length
-        )
+    # Use "custom" tokenize_function if provided; else use the default
+    if tokenize_fn is None:
+        def tokenize_fn(examples):
+            return tokenizer(
+                examples['text'],
+                padding='max_length',
+                truncation=True,
+                max_length=max_seq_length
+            )
 
     dataset = dataset.map(tokenize_fn, batched=True)
 
-    def collate_fn(batch):
-        return {
-            'input_ids': torch.stack([torch.tensor(x['input_ids']) for x in batch]),
-            'attention_mask': torch.stack([torch.tensor(x['attention_mask']) for x in batch]),
-            'labels': torch.tensor([x['label'] for x in batch])
-        }
+    # Use custom collate_fn if provided; else use default
+    if collate_fn is None:
+        def collate_fn(batch):
+            return {
+                'input_ids': torch.stack([torch.tensor(x['input_ids']) for x in batch]),
+                'attention_mask': torch.stack([torch.tensor(x['attention_mask']) for x in batch]),
+                'labels': torch.tensor([x['label'] for x in batch])
+            }
 
     train_loader = DataLoader(
         dataset['train'],
