@@ -11,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
 import numpy as np
+import os
 
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased") ##@ making it global !!
 
@@ -26,7 +27,11 @@ def run_gem_pipeline(
     cluster_size=256,
     threshold=0.65, 
     tokenize_fn= None,
-    collate_fn= None
+    collate_fn= None, 
+    save_path= None,
+    checkpoint_dir = "checkpoints",
+    checkpoint_interval= 5,
+    resume_from_checkpoint = None
 ):
     """
     Runs the GEM model training & evaluation pipeline on a custom dataset.
@@ -200,6 +205,24 @@ def run_gem_pipeline(
         num_warmup_steps=100,
         num_training_steps=len(train_loader) * num_epochs
     )
+    
+    # Resume from checkpoint if provided
+    start_epoch = 0
+    if resume_from_checkpoint and os.path.exists(resume_from_checkpoint):
+        checkpoint = torch.load(resume_from_checkpoint)
+        if isinstance(model, nn.DataParallel):
+            model.module.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        start_epoch = checkpoint['epoch']
+        print(f"Resumed from checkpoint: {resume_from_checkpoint} at epoch {start_epoch}")
+
+    # Create checkpoint directory if it doesn’t exist
+    if checkpoint_dir and not os.path.exists(checkpoint_dir):
+        os.makedirs(checkpoint_dir)
+
 
     # ========================
     # Training Loop
@@ -229,6 +252,19 @@ def run_gem_pipeline(
 
         avg_loss = total_loss / len(train_loader)
         print(f"Epoch {epoch+1}/{num_epochs} | Avg Loss: {avg_loss:.4f}")
+        
+        # Save checkpoint every `checkpoint_interval` epochs
+        if (epoch + 1) % checkpoint_interval == 0:
+            checkpoint = {
+                'epoch': epoch + 1,
+                'model_state_dict': model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
+                'loss': avg_loss
+            }
+            checkpoint_path = os.path.join(checkpoint_dir, f'checkpoint_epoch_{epoch+1}.pth')
+            torch.save(checkpoint, checkpoint_path)
+            print(f"Saved checkpoint to {checkpoint_path}")
 
     # ========================
     # Evaluation Loop
@@ -251,6 +287,12 @@ def run_gem_pipeline(
     final_accuracy = 100 * correct / total
     print(f"Final Accuracy: {final_accuracy:.2f}%")
 
+    # Save final model if save_path is provided
+    if save_path:
+        final_state_dict = model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict()
+        torch.save(final_state_dict, save_path)
+        print(f"Saved final model to {save_path}")
+        
     return {
         'accuracy': final_accuracy,
         'average_loss': avg_loss
